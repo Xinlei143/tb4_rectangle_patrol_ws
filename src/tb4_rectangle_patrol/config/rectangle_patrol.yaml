@@ -1,0 +1,28 @@
+rectangle_patrol:
+  ros__parameters:
+    width: 0.8
+    length: 1.3
+    frame_id: map
+    base_frame: base_link
+    localizer: amcl
+    initial_pose_enabled: true
+    initial_x: 1.8
+    initial_y: 0.2
+    initial_yaw: 1.57079632679
+    initial_yaw_tolerance: 0.35
+    undock_mode: drive_forward
+    undock_distance: 0.1
+    undock_speed: 0.05
+    map_bounds_enabled: true
+    retry_limit: 3
+    goal_timeout_sec: 120.0
+    clear_costmaps_on_retry: true
+
+initial_pose_publisher:
+  ros__parameters:
+    frame_id: map
+    initial_x: 1.8
+    initial_y: 0.2
+    initial_yaw: 1.57079632679
+    publish_period_sec: 0.5
+    max_publish_count: 20
