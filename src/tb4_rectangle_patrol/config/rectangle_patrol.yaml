@@ -14,6 +14,8 @@ rectangle_patrol:
     undock_distance: 0.1
     undock_speed: 0.05
     map_bounds_enabled: true
+    wait_for_sim_ready: true
+    sim_ready_timeout_sec: 45.0
     retry_limit: 3
     goal_timeout_sec: 120.0
     clear_costmaps_on_retry: true
@@ -26,3 +28,5 @@ initial_pose_publisher:
     initial_yaw: 1.57079632679
     publish_period_sec: 0.5
     max_publish_count: 20
+    wait_for_sim_ready: true
+    sim_ready_timeout_sec: 45.0

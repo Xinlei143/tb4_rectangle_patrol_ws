@@ -3,6 +3,7 @@ import unittest
 
 from tb4_rectangle_patrol.rectangle_geometry import (
     compute_rectangle_waypoints,
+    compute_rear_dock_pose,
     simulate_forward_offset,
 )
 
@@ -83,6 +84,19 @@ class RectangleGeometryTest(unittest.TestCase):
             self.assertAlmostEqual(waypoint.x, expected_values[0], places=6)
             self.assertAlmostEqual(waypoint.y, expected_values[1], places=6)
             self.assertAlmostEqual(waypoint.yaw, expected_values[2], places=6)
+
+    def test_dock_pose_is_behind_right_bottom_robot_and_faces_top_right(self):
+        x, y, yaw = compute_rear_dock_pose(
+            robot_x=1.8,
+            robot_y=0.2,
+            robot_yaw=math.pi / 2.0,
+            offset=0.157,
+            dock_yaw=math.pi / 2.0,
+        )
+
+        self.assertAlmostEqual(x, 1.8, places=6)
+        self.assertAlmostEqual(y, 0.043, places=6)
+        self.assertAlmostEqual(yaw, math.pi / 2.0, places=6)
 
 
 if __name__ == '__main__':

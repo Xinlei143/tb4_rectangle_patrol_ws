@@ -1,7 +1,7 @@
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -13,7 +13,6 @@ def generate_launch_description():
     pkg_patrol = get_package_share_directory('tb4_rectangle_patrol')
     pkg_tb4_nav = get_package_share_directory('turtlebot4_navigation')
     pkg_tb4_description = get_package_share_directory('turtlebot4_description')
-    pkg_tb4_ignition = get_package_share_directory('turtlebot4_ignition_bringup')
     pkg_ros_ign_gazebo = get_package_share_directory('ros_ign_gazebo')
 
     ARGUMENTS = [
@@ -68,6 +67,18 @@ def generate_launch_description():
             'initial_yaw',
             default_value='1.57079632679',
             description='Initial robot yaw; +pi/2 faces the top-right corner from bottom-right.'),
+        DeclareLaunchArgument(
+            'dock_offset',
+            default_value='0.157',
+            description='Distance from robot base to the dock behind the initial pose.'),
+        DeclareLaunchArgument(
+            'dock_yaw',
+            default_value='1.57079632679',
+            description='Dock yaw in simulation coordinates.'),
+        DeclareLaunchArgument(
+            'nav2_start_delay',
+            default_value='8.0',
+            description='Delay Nav2 and patrol startup in simulation mode.'),
     ]
 
     start_sim = LaunchConfiguration('start_sim')
@@ -82,6 +93,9 @@ def generate_launch_description():
     initial_x = LaunchConfiguration('initial_x')
     initial_y = LaunchConfiguration('initial_y')
     initial_yaw = LaunchConfiguration('initial_yaw')
+    dock_offset = LaunchConfiguration('dock_offset')
+    dock_yaw = LaunchConfiguration('dock_yaw')
+    nav2_start_delay = LaunchConfiguration('nav2_start_delay')
 
     rectangle_world = PathJoinSubstitution(
         [pkg_patrol, 'worlds', 'rectangle_2m_x_1_5m.sdf'])
@@ -90,7 +104,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_ros_ign_gazebo, 'launch', 'ign_gazebo.launch.py'])),
         launch_arguments={
-            'ign_args': [rectangle_world, ' -r -v 4'],
+            'gz_args': [rectangle_world, ' -r -v 4'],
         }.items(),
         condition=IfCondition(start_sim))
 
@@ -104,7 +118,7 @@ def generate_launch_description():
 
     sim_robot_spawn = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([pkg_tb4_ignition, 'launch', 'turtlebot4_spawn.launch.py'])),
+            PathJoinSubstitution([pkg_patrol, 'launch', 'rectangle_turtlebot4_spawn.launch.py'])),
         launch_arguments={
             'model': model,
             'namespace': namespace,
@@ -117,6 +131,8 @@ def generate_launch_description():
             'y': initial_y,
             'z': '0.0',
             'yaw': initial_yaw,
+            'dock_offset': dock_offset,
+            'dock_yaw': dock_yaw,
         }.items(),
         condition=IfCondition(start_sim))
 
@@ -154,7 +170,7 @@ def generate_launch_description():
             'map': map_yaml,
         }.items())
 
-    nav2 = IncludeLaunchDescription(
+    nav2_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_tb4_nav, 'launch', 'nav2.launch.py'])),
         launch_arguments={
@@ -162,6 +178,16 @@ def generate_launch_description():
             'namespace': namespace,
             'params_file': nav2_params,
         }.items())
+
+    nav2_real = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([pkg_tb4_nav, 'launch', 'nav2.launch.py'])),
+        launch_arguments={
+            'use_sim_time': use_sim_time,
+            'namespace': namespace,
+            'params_file': nav2_params,
+        }.items(),
+        condition=UnlessCondition(start_sim))
 
     initial_pose = Node(
         package='tb4_rectangle_patrol',
@@ -179,13 +205,27 @@ def generate_launch_description():
             },
         ])
 
-    patrol = Node(
+    patrol_sim = Node(
         package='tb4_rectangle_patrol',
         executable='rectangle_patrol',
         name='rectangle_patrol',
         namespace=namespace,
         output='screen',
         parameters=[patrol_params, {'use_sim_time': use_sim_time}])
+
+    patrol_real = Node(
+        package='tb4_rectangle_patrol',
+        executable='rectangle_patrol',
+        name='rectangle_patrol',
+        namespace=namespace,
+        output='screen',
+        parameters=[patrol_params, {'use_sim_time': use_sim_time}],
+        condition=UnlessCondition(start_sim))
+
+    delayed_sim_navigation = TimerAction(
+        period=nav2_start_delay,
+        actions=[nav2_sim, patrol_sim],
+        condition=IfCondition(start_sim))
 
     rviz = Node(
         package='rviz2',
@@ -203,8 +243,9 @@ def generate_launch_description():
         robot_description,
         rplidar_static_tf,
         localization,
-        nav2,
+        delayed_sim_navigation,
+        nav2_real,
         initial_pose,
-        patrol,
+        patrol_real,
         rviz,
     ])

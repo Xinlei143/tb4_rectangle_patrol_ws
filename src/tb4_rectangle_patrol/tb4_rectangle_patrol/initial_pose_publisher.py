@@ -64,6 +64,8 @@ class InitialPosePublisher(Node):
     def _publish_initial_pose(self):
         if self.amcl_pose_received:
             return
+        if not self.map_received:
+            return
         if self.max_publish_count > 0 and self.publish_count >= self.max_publish_count:
             self.get_logger().warn('Initial pose publish limit reached before AMCL pose.')
             self.timer.cancel()

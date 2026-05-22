@@ -13,6 +13,7 @@ from tf2_ros import Buffer, TransformException, TransformListener
 
 from tb4_rectangle_patrol.map_bounds import FreeSpaceBounds
 from tb4_rectangle_patrol.rectangle_geometry import compute_rectangle_waypoints
+from tb4_rectangle_patrol.sim_ready import wait_for_sim_ready
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Navigator
 
 
@@ -40,6 +41,8 @@ class RectanglePatrol:
         self.navigator.declare_parameter('undock_distance', 0.1)
         self.navigator.declare_parameter('undock_speed', 0.05)
         self.navigator.declare_parameter('map_bounds_enabled', True)
+        self.navigator.declare_parameter('wait_for_sim_ready', True)
+        self.navigator.declare_parameter('sim_ready_timeout_sec', 45.0)
         self.navigator.declare_parameter('retry_limit', 3)
         self.navigator.declare_parameter('goal_timeout_sec', 120.0)
         self.navigator.declare_parameter('clear_costmaps_on_retry', True)
@@ -58,6 +61,8 @@ class RectanglePatrol:
         self.undock_distance = self.navigator.get_parameter('undock_distance').value
         self.undock_speed = self.navigator.get_parameter('undock_speed').value
         self.map_bounds_enabled = self.navigator.get_parameter('map_bounds_enabled').value
+        self.wait_for_sim_ready = self.navigator.get_parameter('wait_for_sim_ready').value
+        self.sim_ready_timeout_sec = self.navigator.get_parameter('sim_ready_timeout_sec').value
         self.retry_limit = self.navigator.get_parameter('retry_limit').value
         self.goal_timeout_sec = self.navigator.get_parameter('goal_timeout_sec').value
         self.clear_costmaps_on_retry = (
@@ -185,6 +190,12 @@ class RectanglePatrol:
                 f'expected={math.degrees(float(self.initial_yaw)):.1f} deg.')
 
     def _simple_undock(self):
+        wait_for_sim_ready(
+            self.navigator,
+            enabled=self.wait_for_sim_ready,
+            timeout_sec=self.sim_ready_timeout_sec,
+            require_controller=True)
+
         if self.undock_mode != 'drive_forward':
             self.navigator.info('Using TurtleBot4 undock action.')
             self.navigator.undock()

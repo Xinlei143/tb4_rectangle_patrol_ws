@@ -21,6 +21,14 @@ def simulate_forward_offset(x, y, yaw, distance):
     )
 
 
+def compute_rear_dock_pose(robot_x, robot_y, robot_yaw, offset, dock_yaw):
+    return (
+        robot_x - offset * math.cos(robot_yaw),
+        robot_y - offset * math.sin(robot_yaw),
+        dock_yaw,
+    )
+
+
 def compute_rectangle_waypoints(start_x, start_y, start_yaw, width, length):
     headings = [
         start_yaw,
